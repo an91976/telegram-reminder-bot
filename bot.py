@@ -9,9 +9,8 @@ import pytz
 CHOOSING_ACTION = 0
 ADDING_REMINDER = 1
 REMOVING_REMINDER = 2
-SETTING_TIME = 3
 
-# Структура для хранения напоминаний
+# Структура напоминаний по умолчанию
 DEFAULT_REMINDERS = {
     "teeth_morning": {
         "text": "Даня, ты почистил зубы? 🦷",
@@ -100,7 +99,6 @@ async def show_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def add_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Добавление нового напоминания"""
-    # Проверяем, начинаем ли мы новое добавление
     if not context.user_data.get('adding_reminder'):
         context.user_data['adding_reminder'] = True
         await update.message.reply_text(
@@ -109,14 +107,13 @@ async def add_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return ADDING_REMINDER
 
-    # Получаем введенный текст и сохраняем напоминание
     reminder_text = update.message.text
     reminders = load_reminders()
     
     new_reminder_id = f"custom_reminder_{len(reminders) + 1}"
     reminders[new_reminder_id] = {
         "text": reminder_text,
-        "time": "12:00",  # время по умолчанию
+        "time": "12:00",
         "days": "daily",
         "enabled": True
     }
@@ -131,71 +128,20 @@ async def add_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Частота: Ежедневно"
     )
     
-    # Обновляем планировщик для нового напоминания
     setup_reminder_job(context.application, new_reminder_id, reminders[new_reminder_id], update.effective_chat.id)
     
+    keyboard = [
+        ['Показать напоминания'],
+        ['Добавить напоминание'],
+        ['Удалить напоминание'],
+        ['Включить/выключить напоминание']
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
+    await update.message.reply_text(
+        'Выберите следующее действие:',
+        reply_markup=reply_markup
+    )
     return CHOOSING_ACTION
-    
-    elif context.user_data['adding_step'] == 'text':
-        context.user_data['reminder_text'] = update.message.text
-        context.user_data['adding_step'] = 'time'
-        await update.message.reply_text('Введите время в формате ЧЧ:ММ (например, 14:30):')
-        return ADDING_REMINDER
-    
-    elif context.user_data['adding_step'] == 'time':
-        try:
-            time_str = update.message.text
-            hours, minutes = map(int, time_str.split(':'))
-            if not (0 <= hours <= 23 and 0 <= minutes <= 59):
-                raise ValueError
-            
-            context.user_data['reminder_time'] = time_str
-            keyboard = [['Ежедневно'], ['По будням'], ['Каждые 3 дня'], ['Каждые 7 дней']]
-            reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
-            context.user_data['adding_step'] = 'frequency'
-            await update.message.reply_text('Выберите частоту напоминания:', reply_markup=reply_markup)
-            return ADDING_REMINDER
-            
-        except ValueError:
-            await update.message.reply_text('Неверный формат времени. Попробуйте снова (например, 14:30):')
-            return ADDING_REMINDER
-    
-    elif context.user_data['adding_step'] == 'frequency':
-        frequency = update.message.text
-        reminders = load_reminders()
-        
-        new_reminder_id = f"custom_reminder_{len(reminders) + 1}"
-        new_reminder = {
-            "text": context.user_data['reminder_text'],
-            "time": context.user_data['reminder_time'],
-            "enabled": True
-        }
-        
-        if frequency == 'Ежедневно':
-            new_reminder['days'] = 'daily'
-        elif frequency == 'По будням':
-            new_reminder['days'] = 'weekdays'
-        elif frequency.startswith('Каждые'):
-            days = int(frequency.split()[1])
-            new_reminder['interval_days'] = days
-        
-        reminders[new_reminder_id] = new_reminder
-        save_reminders(reminders)
-        
-        # Очистка данных
-        context.user_data.clear()
-        
-        await update.message.reply_text(
-            f"Напоминание добавлено!\n"
-            f"Текст: {new_reminder['text']}\n"
-            f"Время: {new_reminder['time']}\n"
-            f"Частота: {frequency}"
-        )
-        
-        # Перезапуск планировщика для нового напоминания
-        setup_reminder_job(context.application, new_reminder_id, new_reminder, update.effective_chat.id)
-        
-        return await start(update, context)
 
 async def remove_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Удаление напоминания"""
@@ -302,13 +248,11 @@ def main():
 
     application = Application.builder().token(token).build()
     
-    # Настройка часового пояса
     job_queue = application.job_queue
     job_queue.scheduler.timezone = pytz.timezone('Asia/Dubai')
     
     chat_id = os.environ.get("CHAT_ID", "YOUR_CHAT_ID_HERE")
 
-    # Настройка обработчиков команд
     conv_handler = ConversationHandler(
         entry_points=[
             CommandHandler('start', start),
@@ -336,11 +280,7 @@ def main():
     )
 
     application.add_handler(conv_handler)
-    
-    # Настройка напоминаний
     setup_jobs(application, chat_id)
-
-    # Запуск бота
     application.run_polling()
 
 if __name__ == "__main__":
