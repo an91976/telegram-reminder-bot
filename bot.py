@@ -100,13 +100,41 @@ async def show_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def add_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Добавление нового напоминания"""
-    if 'adding_step' not in context.user_data:
-        context.user_data['adding_step'] = 'text'
+    # Проверяем, начинаем ли мы новое добавление
+    if not context.user_data.get('adding_reminder'):
+        context.user_data['adding_reminder'] = True
         await update.message.reply_text(
             'Введите текст напоминания:',
             reply_markup=ReplyKeyboardRemove()
         )
         return ADDING_REMINDER
+
+    # Получаем введенный текст и сохраняем напоминание
+    reminder_text = update.message.text
+    reminders = load_reminders()
+    
+    new_reminder_id = f"custom_reminder_{len(reminders) + 1}"
+    reminders[new_reminder_id] = {
+        "text": reminder_text,
+        "time": "12:00",  # время по умолчанию
+        "days": "daily",
+        "enabled": True
+    }
+    
+    save_reminders(reminders)
+    context.user_data['adding_reminder'] = False
+    
+    await update.message.reply_text(
+        f"Напоминание добавлено!\n"
+        f"Текст: {reminder_text}\n"
+        f"Время: 12:00\n"
+        f"Частота: Ежедневно"
+    )
+    
+    # Обновляем планировщик для нового напоминания
+    setup_reminder_job(context.application, new_reminder_id, reminders[new_reminder_id], update.effective_chat.id)
+    
+    return CHOOSING_ACTION
     
     elif context.user_data['adding_step'] == 'text':
         context.user_data['reminder_text'] = update.message.text
