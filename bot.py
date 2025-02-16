@@ -183,18 +183,28 @@ def main():
     if not token:
         raise RuntimeError("BOT_TOKEN не установлен!")
 
-    # Инициализация приложения
     application = Application.builder().token(token).build()
     
-    # Настройка часового пояса для планировщика
     job_queue = application.job_queue
     job_queue.scheduler.timezone = pytz.timezone('Asia/Dubai')
     
     chat_id = os.environ.get("CHAT_ID", "YOUR_CHAT_ID_HERE")
 
-    # Настройка обработчиков команд
+    # Добавляем обработчики для каждой команды
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("show", show_reminders))
+    application.add_handler(CommandHandler("add", add_reminder))
+    application.add_handler(CommandHandler("remove", remove_reminder))
+    application.add_handler(CommandHandler("toggle", toggle_reminder))
+
+    # Настраиваем обработчик разговора для интерактивных действий
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+        entry_points=[
+            CommandHandler('start', start),
+            CommandHandler('add', add_reminder),
+            CommandHandler('remove', remove_reminder),
+            CommandHandler('toggle', toggle_reminder)
+        ],
         states={
             CHOOSING_ACTION: [
                 MessageHandler(filters.Regex('^Показать напоминания$'), show_reminders),
@@ -214,11 +224,7 @@ def main():
     )
 
     application.add_handler(conv_handler)
-    
-    # Настройка расписания напоминаний
     setup_jobs(application, chat_id)
-
-    # Запуск бота
     application.run_polling()
 
 if __name__ == "__main__":
