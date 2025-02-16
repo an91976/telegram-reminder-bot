@@ -180,12 +180,18 @@ def main():
     """Запуск бота"""
     token = "7636715892:AAEkj394bXuxJIrumZsj19zuXyZ7ntU-SHc"
     
-    if not token:
-        raise RuntimeError("BOT_TOKEN не установлен!")
+if not token:
+    raise RuntimeError("BOT_TOKEN не установлен!")
 
-    application = Application.builder().token(token).job_queue(True).build()
-    
-    chat_id = os.environ.get("CHAT_ID", "YOUR_CHAT_ID_HERE")
+# Создаем билдер с указанными параметрами
+builder = Application.builder()
+builder.token(token)
+# Устанавливаем часовой пояс для job queue
+builder.defaults(tzinfo=pytz.timezone('Europe/Moscow'))
+# Создаем приложение
+application = builder.build()
+
+chat_id = os.environ.get("CHAT_ID", "YOUR_CHAT_ID_HERE")
 
     # Настраиваем обработчики команд
     conv_handler = ConversationHandler(
