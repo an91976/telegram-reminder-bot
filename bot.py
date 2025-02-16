@@ -182,12 +182,14 @@ def main():
     
     if not token:
         raise RuntimeError("BOT_TOKEN не установлен!")
-
     builder = Application.builder()
     builder.token(token)
     builder.job_queue(True)
-    builder.defaults(tzinfo=pytz.timezone('Asia/Dubai'))
+    # Сначала строим приложение
     application = builder.build()
+    # Затем устанавливаем часовой пояс для планировщика
+    job_queue = application.job_queue
+    job_queue.scheduler.timezone = pytz.timezone('Asia/Dubai')
     
     chat_id = os.environ.get("CHAT_ID", "YOUR_CHAT_ID_HERE")
 
