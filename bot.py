@@ -183,7 +183,7 @@ def main():
     if not token:
         raise RuntimeError("BOT_TOKEN не установлен!")
 
-    application = Application.builder().token(token).build()
+    application = Application.builder().token(token).job_queue(True).build()
     
     chat_id = os.environ.get("CHAT_ID", "YOUR_CHAT_ID_HERE")
 
