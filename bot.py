@@ -182,9 +182,7 @@ def main():
     
     if not token:
         raise RuntimeError("BOT_TOKEN не установлен!")
-    builder = Application.builder()
-    builder.token(token)
-    builder.job_queue(True)
+application = Application.builder().token(token).build()
     # Сначала строим приложение
     application = builder.build()
     # Затем устанавливаем часовой пояс для планировщика
