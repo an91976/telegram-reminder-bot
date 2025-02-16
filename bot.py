@@ -146,11 +146,11 @@ async def handle_reminder_toggle(update: Update, context: ContextTypes.DEFAULT_T
 def setup_jobs(application, chat_id):
     """Настройка расписания напоминаний"""
     reminders = load_reminders()
-    moscow_tz = pytz.timezone('Europe/Moscow')
+    dubai_tz = pytz.timezone('Asia/Dubai')
     
     for rid, reminder in reminders.items():
         hour, minute = map(int, reminder['time'].split(':'))
-        reminder_time = time(hour=hour, minute=minute, tzinfo=moscow_tz)
+        reminder_time = time(hour=hour, minute=minute, tzinfo=dubai_tz)
         
         if 'interval_days' in reminder:
             application.job_queue.run_repeating(
@@ -180,18 +180,16 @@ def main():
     """Запуск бота"""
     token = "7636715892:AAEkj394bXuxJIrumZsj19zuXyZ7ntU-SHc"
     
-if not token:
-    raise RuntimeError("BOT_TOKEN не установлен!")
+    if not token:
+        raise RuntimeError("BOT_TOKEN не установлен!")
 
-# Создаем билдер с указанными параметрами
-builder = Application.builder()
-builder.token(token)
-# Устанавливаем часовой пояс для job queue
-builder.defaults(tzinfo=pytz.timezone('Europe/Moscow'))
-# Создаем приложение
-application = builder.build()
-
-chat_id = os.environ.get("CHAT_ID", "YOUR_CHAT_ID_HERE")
+    builder = Application.builder()
+    builder.token(token)
+    builder.job_queue(True)
+    builder.defaults(tzinfo=pytz.timezone('Asia/Dubai'))
+    application = builder.build()
+    
+    chat_id = os.environ.get("CHAT_ID", "YOUR_CHAT_ID_HERE")
 
     # Настраиваем обработчики команд
     conv_handler = ConversationHandler(
